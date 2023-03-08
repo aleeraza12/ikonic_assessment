@@ -22,6 +22,22 @@ class MerchantController extends Controller
      */
     public function orderStats(Request $request): JsonResponse
     {
-        // TODO: Complete this method
+        $merchant = $request->user()->merchant;
+
+        $from = $request->input('from');
+        $to = $request->input('to');
+
+        $count = $this->merchantService->countOrdersInRange($merchant, $from, $to);
+        $commissionOwed = $this->merchantService->calculateUnpaidCommissions($merchant, $from, $to);
+        $revenue = $this->merchantService->sumOrderSubtotals($merchant, $from, $to);
+
+        return response()->json([
+            'count' => $count,
+            'commission_owed' => $commissionOwed,
+            'revenue' => $revenue,
+        ]);
     }
 }
+
+
+

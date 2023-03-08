@@ -23,6 +23,37 @@ class OrderService
      */
     public function processOrder(array $data)
     {
-        // TODO: Complete this method
+        // Check if the order has already been processed based on order_id
+        $order = Order::where('order_id', $data['order_id'])->first();
+        if ($order) {
+            return;
+        }
+
+        // Get the merchant associated with the order
+        $merchant = Merchant::where('domain', $data['merchant_domain'])->first();
+        if (!$merchant) {
+            // Merchant not found, do something like throw an exception or log an error
+            return;
+        }
+
+        // Check if an affiliate already exists for the customer's email
+        $affiliate = Affiliate::where('email', $data['customer_email'])->first();
+        if (!$affiliate) {
+            // Create a new affiliate
+            $affiliate = $this->affiliateService->register($merchant, $data['customer_email'], $data['customer_name'], 0);
+        }
+
+        // Create a new order and associate it with the affiliate and merchant
+        $order = new Order();
+        $order->order_id = $data['order_id'];
+        $order->subtotal_price = $data['subtotal_price'];
+        $order->discount_code = $data['discount_code'];
+        $order->affiliate()->associate($affiliate);
+        $order->merchant()->associate($merchant);
+        $order->save();
+
+        // Log the commission for the affiliate
+        $commission = $data['subtotal_price'] * $merchant->commission_rate;
+        $affiliate->logCommission($commission);
     }
 }
